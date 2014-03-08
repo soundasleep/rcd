@@ -86,6 +86,7 @@ def shoot(x, y, dx, dy, map, monsters, explosions)
       if m.x == x and m.y == y
         monsters.delete(m)
         explosions.push(Explosion.new(x, y))
+        return  # we've hit something, don't go through them
       end
     end
 

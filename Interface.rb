@@ -18,7 +18,7 @@ class Interface
         else
           case map.data[(y * map.width) + x]
           when 1
-            addstr "X"
+            addstr "o"
           when 2
             addstr "."
           when 3
