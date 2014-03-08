@@ -13,7 +13,7 @@ class Map
   end
 
   def height
-    10
+    50
   end
   def width
     50
@@ -43,11 +43,18 @@ class Player
   end
 end
 
+class Interface
+  def max_width
+    30
+  end
+  def max_height
+    11
+  end
+end
+
 map = Map.new()
 player = Player.new(10, 5)
-
-max_screen_width = 10
-max_screen_height = 10
+interface = Interface.new()
 
 for i in 0..25
   x = (rand(map.height) * map.width) + rand(map.width)
@@ -59,27 +66,37 @@ for i in 0..(map.height / 5)
   end
 end
 
-def draw_map(map, player)
-  for y in 0 .. map.height
-    setpos 2 + y, 2
-    for x in 0 .. map.width
-      case map.data[(y * map.width) + x]
-      when 1
-        addstr "X"
+def draw_map(map, player, interface)
+  for dy in 0..interface.max_height
+    y = player.y - (interface.max_height / 2) + dy
+    setpos 1 + dy, 2
+    for dx in 0..interface.max_width
+      x = player.x - (interface.max_width / 2) + dx
+
+      if x < 0 or y < 0 or x >= map.width or y >= map.height
+        addstr " "    # out of bounds
       else
-        addstr "."
+        case map.data[(y * map.width) + x]
+        when 1
+          addstr "X"
+        else
+          addstr "."
+        end
       end
     end
   end
 
   # find the player
-  setpos 2 + player.y, 2 + player.x
+  # setpos 2 + player.y, 2 + player.x
+  setpos 2 + (interface.max_height / 2), 2 + (interface.max_width / 2)
   addstr "@"
 
-  i = 0
-  setpos 15 + i, 2
-  addstr "meow"
+  setpos interface.max_height + 3, 2
+  addstr "(" + player.x.to_s + "," + player.y.to_s + ")"
 
+end
+
+def draw_instructions(interface)
   instructions = [
     "   Q - quit", 
     "wasd - move"
@@ -87,25 +104,19 @@ def draw_map(map, player)
   # for i in 0..instructions.length - this wasn't working
   i = 0
   for inst in instructions 
-    setpos 15 + i, 2
+    setpos interface.max_height + 4 + i, 2
     addstr inst
     i += 1
   end
-
-  draw_instructions
-  refresh
-end
-
-def draw_instructions
-
 end
 
 # s = stdscr
 
-Thread.new(map, player) {
+Thread.new(map, player, interface) {
   loop do
-    draw_map(map, player)
-    #draw_instructions
+    draw_map(map, player, interface)
+    draw_instructions(interface)
+    refresh
     sleep 0.01
   end
 }
@@ -119,10 +130,10 @@ loop do
   when "w"
     player.y -= 1 unless player.y <= 0
   when "s"
-    player.y += 1 unless player.y >= map.height
+    player.y += 1 unless player.y >= (map.height - 1)
   when "a"
     player.x -= 1 unless player.x <= 0
   when "d"
-    player.x += 1 unless player.x >= map.width
+    player.x += 1 unless player.x >= (map.width - 1)
   end
 end
