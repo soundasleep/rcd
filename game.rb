@@ -25,17 +25,14 @@ class Map
 
     # lets initialise some rooms and stuff
     rooms = Array.new()
-    for _ in 0..(width / 2)
-      room = Room.new(rand(width), rand(height), rand(10) + 2, rand(5) + 2)
+    for i in 0..(width / 10)
+      room = Room.new(1 + rand(width - 2), 1 + rand(height - 2), rand(8) + 2, rand(5) + 2)
+      room.connected = rand(rooms.length)
+      room.connected = 1 if i == 0
       rooms.push room
     end
 
-    # and create connections
-    for r in rooms
-      r.connected = rand(rooms.length)
-    end
-
-    # now create the map
+    # now create the rooms on the map
     for r in rooms
       for dx in -r.width .. r.width
         for dy in -r.height .. r.height
@@ -47,14 +44,39 @@ class Map
           x = (width - 1) if x >= width
           y = (height - 1) if y >= height
 
-          if dx == -r.width or dx == r.width or dy == -r.height or dy == r.height
-            @data[(y * width) + x] = 1
-          elsif x == 0 or y == 0 or x == (width - 1) or y == (height - 1)    # also handle border rooms
-            @data[(y * width) + x] = 1
-          else
-            @data[(y * width) + x] = 2
-          end
+          @data[(y * width) + x] = 2
         end
+      end
+    end
+
+    # then, once we have generated all the rooms, generate single width corridors as connections
+    for r in rooms
+      c = rooms[r.connected]    # connected room
+
+      # case rand(1)
+      # when 0, 1
+        # do x first, then y
+        for x in r.x .. c.x
+          @data[(r.y * width) + x] = 4
+        end
+        for y in r.y .. c.y
+          @data[(y * width) + c.x] = 3
+        end
+        for x in c.x .. r.x
+          @data[(r.y * width) + x] = 4
+        end
+        for y in c.y .. r.y
+          @data[(y * width) + c.x] = 3
+        end
+      #when 1
+      #   # TODO do y first, then x
+      # end
+    end
+
+    # now find all unwalled edges and create walls
+    for x in 0..width
+      for y in 0..height
+
       end
     end
   end
@@ -96,10 +118,10 @@ end
 
 class Interface
   def max_width
-    40
+    70
   end
   def max_height
-    12
+    20
   end
 end
 
@@ -115,16 +137,6 @@ loop do
 end
 interface = Interface.new()
 
-for i in 0..25
-  x = (rand(map.height) * map.width) + rand(map.width)
-  map.data[x] = 1;
-end
-for i in 0..(map.height / 5)
-  for x in 0..map.width
-    map.data[((i * 5) * map.width) + x] = 1;
-  end
-end
-
 def draw_map(map, player, interface)
   for dy in 0..interface.max_height
     y = player.y - (interface.max_height / 2) + dy
@@ -133,13 +145,17 @@ def draw_map(map, player, interface)
       x = player.x - (interface.max_width / 2) + dx
 
       if x < 0 or y < 0 or x >= map.width or y >= map.height
-        addstr " "    # out of bounds
+        addstr "Z"    # out of bounds
       else
         case map.data[(y * map.width) + x]
         when 1
           addstr "X"
         when 2
           addstr "."
+        when 3
+          addstr ","
+        when 4
+          addstr ";"
         else
           addstr " "
         end
