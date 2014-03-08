@@ -6,7 +6,7 @@ class Interface
     20
   end
 
-  def draw_map(map, player, monsters)
+  def draw_map(map, player, monsters, explosions)
     for dy in 0..max_height
       y = player.y - (max_height / 2) + dy
       setpos 1 + dy, 2
@@ -33,16 +33,10 @@ class Interface
     end
 
     # find the monsters, which may be out of the map
-    for monster in monsters
-      if monster.x >= player.x - (max_width / 2) and monster.x <= player.x + (max_width / 2)
-        if monster.y >= player.y - (max_height / 2) and monster.y <= player.y + (max_height / 2)
-          x = monster.x - player.x + (max_width / 2)
-          y = monster.y - player.y + (max_height / 2)
-          setpos 1 + y, 2 + x
-          addstr "%"
-        end
-      end
-    end
+    render_objects(monsters, player, "&")
+
+    # find the explosions, which may be out of the map
+    render_objects(explosions, player, "%")
 
     # find the player, always in the centre
     # setpos 2 + player.y, 2 + player.x
@@ -50,14 +44,28 @@ class Interface
     addstr "@"
 
     setpos max_height + 3, 2
-    addstr "(" + player.x.to_s + "," + player.y.to_s + ")"
+    addstr "(" + player.x.to_s + "," + player.y.to_s + ") " + monsters.size.to_s + " monsters left     "  # with padding for when 10->9 etc
 
+  end
+
+  def render_objects(array, player, char) 
+    for object in array
+      if object.x >= player.x - (max_width / 2) and object.x <= player.x + (max_width / 2)
+        if object.y >= player.y - (max_height / 2) and object.y <= player.y + (max_height / 2)
+          x = object.x - player.x + (max_width / 2)
+          y = object.y - player.y + (max_height / 2)
+          setpos 1 + y, 2 + x
+          addstr char
+        end
+      end
+    end
   end
 
   def draw_instructions
     instructions = [
       "   Q - quit", 
-      "wasd - move"
+      "wasd - move",
+      "WASD - shoot"
     ]
     # for i in 0..instructions.length - this wasn't working
     i = 0
