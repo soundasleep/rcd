@@ -6,7 +6,6 @@ nl
 noecho
 srand
 
-
 # create a "map"
 class Room
   def initialize(x, y, width, height)
@@ -104,7 +103,10 @@ class Map
   end
 
   def blocked(x, y)
-    @data[(y * width) + x] == 1
+    valid(x, y) and @data[(y * width) + x] == 1
+  end
+  def valid(x, y)
+    x >= 0 and y >= 0 and x < width and y < height
   end
 end
 
@@ -132,6 +134,17 @@ class Player
   # end
 end
 
+class Monster < Player
+  def wander(map)
+    dx = rand(3) - 1
+    dy = rand(3) - 1
+    if !map.blocked(@x + dx, @y + dy)
+      @x += dx
+      @y += dy
+    end
+  end
+end
+
 class Interface
   def max_width
     70
@@ -152,8 +165,19 @@ loop do
   end
 end
 interface = Interface.new()
+monsters = Array.new()
+for _ in 1..20
+  loop do
+    x = rand(map.height)
+    y = rand(map.width)
+    if map.data[(y * map.width) + x] == 2
+      monsters.push Monster.new(x, y)
+      break
+    end
+  end
+end
 
-def draw_map(map, player, interface)
+def draw_map(map, player, monsters, interface)
   for dy in 0..interface.max_height
     y = player.y - (interface.max_height / 2) + dy
     setpos 1 + dy, 2
@@ -179,7 +203,19 @@ def draw_map(map, player, interface)
     end
   end
 
-  # find the player
+  # find the monsters, which may be out of the map
+  for monster in monsters
+    if monster.x >= player.x - (interface.max_width / 2) and monster.x <= player.x + (interface.max_width / 2)
+      if monster.y >= player.y - (interface.max_height / 2) and monster.y <= player.y + (interface.max_height / 2)
+        x = monster.x - player.x + (interface.max_width / 2)
+        y = monster.y - player.y + (interface.max_height / 2)
+        setpos 1 + y, 2 + x
+        addstr "%"
+      end
+    end
+  end
+
+  # find the player, always in the centre
   # setpos 2 + player.y, 2 + player.x
   setpos 1 + (interface.max_height / 2), 2 + (interface.max_width / 2)
   addstr "@"
@@ -203,14 +239,29 @@ def draw_instructions(interface)
   end
 end
 
-# s = stdscr
+# test that draw_map works correctly
+draw_map(map, player, monsters, interface)
+refresh
 
-Thread.new(map, player, interface) {
+Thread.new(map, player, monsters, interface) {
   loop do
-    draw_map(map, player, interface)
+    draw_map(map, player, monsters, interface)
     draw_instructions(interface)
     refresh
     sleep 0.01
+  end
+}
+
+# test that wander works correctly
+monsters[0].wander(map)
+
+Thread.new(map, player, monsters) {
+  loop do
+    sleep 1
+    for monster in monsters
+      # move randomly
+      monster.wander(map)
+    end
   end
 }
 
