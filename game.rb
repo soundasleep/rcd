@@ -102,6 +102,10 @@ class Map
   def data
     @data
   end
+
+  def blocked(x, y)
+    @data[(y * width) + x] == 1
+  end
 end
 
 class Player
@@ -165,9 +169,9 @@ def draw_map(map, player, interface)
         when 2
           addstr "."
         when 3
-          addstr ","
+          addstr "."
         when 4
-          addstr ";"
+          addstr "."
         else
           addstr " "
         end
@@ -217,12 +221,12 @@ loop do
   when "Q"
     exit
   when "w"
-    player.y -= 1 unless player.y <= 0
+    player.y -= 1 unless player.y <= 0 or map.blocked(player.x, player.y - 1)
   when "s"
-    player.y += 1 unless player.y >= (map.height - 1)
+    player.y += 1 unless player.y >= (map.height - 1) or map.blocked(player.x, player.y + 1)
   when "a"
-    player.x -= 1 unless player.x <= 0
+    player.x -= 1 unless player.x <= 0 or map.blocked(player.x - 1, player.y)
   when "d"
-    player.x += 1 unless player.x >= (map.width - 1)
+    player.x += 1 unless player.x >= (map.width - 1) or map.blocked(player.x + 1, player.y)
   end
 end
