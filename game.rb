@@ -6,6 +6,7 @@ nl
 noecho
 srand
 
+
 # create a "map"
 class Room
   def initialize(x, y, width, height)
@@ -39,10 +40,10 @@ class Map
           x = dx + r.x
           y = dy + r.y
 
-          x = 0 if x < 0
-          y = 0 if y < 0
-          x = (width - 1) if x >= width
-          y = (height - 1) if y >= height
+          x = 1 if x < 1
+          y = 1 if y < 1
+          x = (width - 2) if x >= (width - 1)
+          y = (height - 2) if y >= (height - 1)
 
           @data[(y * width) + x] = 2
         end
@@ -53,29 +54,40 @@ class Map
     for r in rooms
       c = rooms[r.connected]    # connected room
 
-      # case rand(1)
-      # when 0, 1
-        # do x first, then y
-        for x in r.x .. c.x
-          @data[(r.y * width) + x] = 4
-        end
-        for y in r.y .. c.y
-          @data[(y * width) + c.x] = 3
-        end
-        for x in c.x .. r.x
-          @data[(r.y * width) + x] = 4
-        end
-        for y in c.y .. r.y
-          @data[(y * width) + c.x] = 3
-        end
-      #when 1
-      #   # TODO do y first, then x
-      # end
+      # we do it both ways because 2..1 does nothing (.. is strictly incremental only)
+      for x in r.x .. c.x
+        @data[(r.y * width) + x] = 4
+      end
+      for y in r.y .. c.y
+        @data[(y * width) + c.x] = 3
+      end
+      for x in c.x .. r.x
+        @data[(r.y * width) + x] = 4
+      end
+      for y in c.y .. r.y
+        @data[(y * width) + c.x] = 3
+      end
     end
 
     # now find all unwalled edges and create walls
-    for x in 0..width
-      for y in 0..height
+    for x in 0..width-1
+      for y in 0..height-1
+
+        # we don't need a wall if we've got something here
+        next if @data[(y * width) + x] > 1
+
+        top = (y > 0 and @data[((y - 1) * width) + x] > 1)
+        bottom = (y < (height-1) and @data[((y + 1) * width) + x] > 1)
+        left = (x > 0 and @data[(y * width) + (x - 1)] > 1)
+        right = (x < (width-1) and @data[(y * width) + (x + 1)] > 1)
+        tl = (y > 0 and x > 0 and @data[((y - 1) * width) + (x - 1)] > 1)
+        tr = (y > 0 and x < (width-1) and @data[((y - 1) * width) + (x + 1)] > 1)
+        bl = (y < (height-1) and x > 0 and @data[((y + 1) * width) + (x - 1)] > 1)
+        br = (y < (height-1) and x < (width-1) and @data[((y + 1) * width) + (x + 1)] > 1)
+
+        if top or bottom or left or right or tl or tr or bl or br
+          @data[(y * width) + x] = 1
+        end
 
       end
     end
