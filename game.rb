@@ -46,15 +46,23 @@ end
 map = Map.new()
 player = Player.new(10, 5)
 
+max_screen_width = 10
+max_screen_height = 10
+
 for i in 0..25
   x = (rand(map.height) * map.width) + rand(map.width)
   map.data[x] = 1;
 end
+for i in 0..(map.height / 5)
+  for x in 0..map.width
+    map.data[((i * 5) * map.width) + x] = 1;
+  end
+end
 
 def draw_map(map, player)
-  for y in 0..map.height
+  for y in 0 .. map.height
     setpos 2 + y, 2
-    for x in 0..map.width
+    for x in 0 .. map.width
       case map.data[(y * map.width) + x]
       when 1
         addstr "X"
@@ -67,7 +75,29 @@ def draw_map(map, player)
   # find the player
   setpos 2 + player.y, 2 + player.x
   addstr "@"
+
+  i = 0
+  setpos 15 + i, 2
+  addstr "meow"
+
+  instructions = [
+    "   Q - quit", 
+    "wasd - move"
+  ]
+  # for i in 0..instructions.length - this wasn't working
+  i = 0
+  for inst in instructions 
+    setpos 15 + i, 2
+    addstr inst
+    i += 1
+  end
+
+  draw_instructions
   refresh
+end
+
+def draw_instructions
+
 end
 
 # s = stdscr
@@ -75,7 +105,8 @@ end
 Thread.new(map, player) {
   loop do
     draw_map(map, player)
-    sleep 0.05
+    #draw_instructions
+    sleep 0.01
   end
 }
 
