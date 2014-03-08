@@ -7,16 +7,63 @@ noecho
 srand
 
 # create a "map"
+class Room
+  def initialize(x, y, width, height)
+    @x = x
+    @y = y
+    @width = width
+    @height = height
+  end
+
+  attr_reader :x, :y, :width, :height
+  attr :connected, true
+end
+
 class Map
   def initialize
     @data = Array.new(width * height, 0)
+
+    # lets initialise some rooms and stuff
+    rooms = Array.new()
+    for _ in 0..(width / 2)
+      room = Room.new(rand(width), rand(height), rand(10) + 2, rand(5) + 2)
+      rooms.push room
+    end
+
+    # and create connections
+    for r in rooms
+      r.connected = rand(rooms.length)
+    end
+
+    # now create the map
+    for r in rooms
+      for dx in -r.width .. r.width
+        for dy in -r.height .. r.height
+          x = dx + r.x
+          y = dy + r.y
+
+          x = 0 if x < 0
+          y = 0 if y < 0
+          x = (width - 1) if x >= width
+          y = (height - 1) if y >= height
+
+          if dx == -r.width or dx == r.width or dy == -r.height or dy == r.height
+            @data[(y * width) + x] = 1
+          elsif x == 0 or y == 0 or x == (width - 1) or y == (height - 1)    # also handle border rooms
+            @data[(y * width) + x] = 1
+          else
+            @data[(y * width) + x] = 2
+          end
+        end
+      end
+    end
   end
 
   def height
-    50
+    100
   end
   def width
-    50
+    100
   end
   def data
     @data
@@ -29,31 +76,43 @@ class Player
     @y = y
   end
 
-  def x
-    @x
-  end
-  def y
-    @y
-  end
-  def x=(a)
-    @x=a
-  end
-  def y=(a)
-    @y=a
-  end
+  attr :x, true
+  attr :y, true
+
+  # equivalent to:
+  # def x
+  #   @x
+  # end
+  # def y
+  #   @y
+  # end
+  # def x=(a)
+  #   @x=a
+  # end
+  # def y=(a)
+  #   @y=a
+  # end
 end
 
 class Interface
   def max_width
-    30
+    40
   end
   def max_height
-    11
+    12
   end
 end
 
 map = Map.new()
-player = Player.new(10, 5)
+player = nil
+loop do
+  x = rand(map.height)
+  y = rand(map.width)
+  if map.data[(y * map.width) + x] == 2
+    player = Player.new(x, y)
+    break
+  end
+end
 interface = Interface.new()
 
 for i in 0..25
@@ -79,8 +138,10 @@ def draw_map(map, player, interface)
         case map.data[(y * map.width) + x]
         when 1
           addstr "X"
-        else
+        when 2
           addstr "."
+        else
+          addstr " "
         end
       end
     end
@@ -88,7 +149,7 @@ def draw_map(map, player, interface)
 
   # find the player
   # setpos 2 + player.y, 2 + player.x
-  setpos 2 + (interface.max_height / 2), 2 + (interface.max_width / 2)
+  setpos 1 + (interface.max_height / 2), 2 + (interface.max_width / 2)
   addstr "@"
 
   setpos interface.max_height + 3, 2
