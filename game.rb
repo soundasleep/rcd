@@ -61,10 +61,16 @@ class PlayerArray < SendableArray
   def sendTo(obj)
     obj.x.to_s + "," + obj.y.to_s
   end
+
+  def without(player)
+    x = PlayerArray.new()
+    select { |a| a != player }.each{ |a| x.push(a) }
+    x
+  end
 end
 
 PORT = 19065
-TICK = 0.5    # send new data between server/client every TICK seconds
+TICK = 0.2    # send new data between server/client every TICK seconds
 
 map = nil
 monsters = nil
@@ -126,8 +132,8 @@ if server
             newPlayer.load(client)
             interface.message = "Updated player " + newPlayer.to_s
             monsters.send client
-            explosions.send client
-            players.send client
+            explosions.send client            
+            players.without(newPlayer).send client   # don't send this player; they already know where they are
             interface.message = "Sent data"
             sleep TICK
           end
