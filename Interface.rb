@@ -8,9 +8,11 @@ class Interface
 
   def initialize
     @message = ""
+    @server = true
   end
 
   attr :message, true
+  attr :server, true
 
   def draw_map(map, player, players, monsters, explosions)
     for dy in 0..max_height
@@ -53,7 +55,7 @@ class Interface
     addstr "@"
 
     setpos max_height + 3, 2
-    addstr "(" + player.x.to_s + "," + player.y.to_s + ") " + monsters.size.to_s + " monsters, " + players.size.to_s + " players left     "  # with padding for when 10->9 etc
+    addstr "(" + player.x.to_s + "," + player.y.to_s + ") " + monsters.size.to_s + " monsters, " + (players.size + (server ? 0 : 1)).to_s + " players left     "  # with padding for when 10->9 etc
 
     setpos max_height + 4, 2
     addstr message + "                                                          "

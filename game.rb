@@ -11,78 +11,10 @@ require_relative 'Monster'
 require_relative 'Explosion'
 require_relative 'QueuedShot'
 require_relative 'Interface'
-
-class SendableArray < Array
-  def send(socket)
-    socket.puts size.to_s
-    for obj in self
-      socket.puts sendTo(obj)
-    end
-  end
-
-  def load(socket)
-    size = socket.gets.to_i
-    clear()
-    for _ in 1..size
-      push loadFrom(socket.gets)
-    end
-  end
-
-  # need to implement local method loadFrom and sendTo
-end
-
-class MonsterArray < SendableArray
-  def loadFrom(str)
-    bits = str.split(",")
-    Monster.new(bits[0].to_i, bits[1].to_i)
-  end
-
-  def sendTo(obj)
-    obj.x.to_s + "," + obj.y.to_s
-  end
-end
-
-class ExplosionArray < SendableArray
-  def loadFrom(str)
-    bits = str.split(",")
-    Explosion.new(bits[0].to_i, bits[1].to_i)
-  end
-
-  def sendTo(obj)
-    obj.x.to_s + "," + obj.y.to_s
-  end
-end
-
-class QueuedShotArray < SendableArray
-  def loadFrom(str)
-    bits = str.split(",")
-    QueuedShot.new(bits[0].to_i, bits[1].to_i, bits[2].to_i, bits[3].to_i)
-  end
-
-  def sendTo(obj)
-    obj.x.to_s + "," + obj.y.to_s + "," + obj.dx.to_s + "," + obj.dy.to_s
-  end
-end
-
-class PlayerArray < SendableArray
-  def loadFrom(str)
-    bits = str.split(",")
-    Player.new(bits[0].to_i, bits[1].to_i)
-  end
-
-  def sendTo(obj)
-    obj.x.to_s + "," + obj.y.to_s
-  end
-
-  def without(player)
-    x = PlayerArray.new()
-    select { |a| a != player }.each{ |a| x.push(a) }
-    x
-  end
-end
+require_relative 'Sendable'
 
 PORT = 19065
-TICK = 0.2    # send new data between server/client every TICK seconds
+TICK = 0.05    # send new data between server/client every TICK seconds
 
 map = nil
 monsters = nil
@@ -131,31 +63,30 @@ if server
   Thread.new(server, interface) {
     loop do
       Thread.start(server.accept) do |client|
+        newPlayer = Player.new(-1,-1)
         begin
           interface.message = "New connection"
           map.send client
           # then load the player
-          newPlayer = Player.new(-1,-1)
           newPlayer.load(client)
           players.push newPlayer
-          interface.message = "Loaded player "
-          interface.message = "Loaded player " + newPlayer.to_s
+          interface.message = "Player " + newPlayer.to_s + " connected"
           loop do
             # regularly send data
             newPlayer.load(client)
-            interface.message = "Updated player " + newPlayer.to_s
             queuedShots.load client
             queuedShots.each{ |s| shoot(s.x, s.y, s.dx, s.dy, map, monsters, explosions) }
             monsters.send client
             explosions.send client            
             players.without(newPlayer).send client   # don't send this player; they already know where they are
-            interface.message = "Sent data"
             sleep TICK
           end
           interface.message = "" + client.to_s + " disconnected"
         rescue => e
           interface.message = "Error " + e.to_s + e.backtrace.join(" ")
         end
+        interface.message = "Player " + newPlayer.to_s + " disconnected"
+        players.delete newPlayer    # delete the player when they disconnect
       end
     end
   }
@@ -172,12 +103,12 @@ else
   map = Map.new()
   map.load socket
   interface.message = "Loaded map"
+  interface.server = false
 
   # create the player (after the map is loaded) - TODO in the future create multiple players
   player = createPlayer(map)
   player.send socket
-  interface.message = "Sent initial player"
-
+  
   # everything else (players, monsters) is sent by the server regularly
   monsters = MonsterArray.new()
   explosions = ExplosionArray.new()
@@ -186,19 +117,18 @@ else
     begin
       loop do
         player.send socket
-        interface.message = "Updated player"
         queuedShots.send socket
         queuedShots.clear()
         monsters.load socket
         explosions.load socket
         players.load socket
-        interface.message = "Received data"
         # we don't sleep here because we'll block on load() waiting for data
         # (i.e. the server controls the data rate)
       end
     rescue => e
-      interface.message = e.to_s
-      puts e
+      interface.message = "Error " + e.to_s + e.backtrace.join(" ")
+      sleep 10
+      exit
     end
   }
 end
