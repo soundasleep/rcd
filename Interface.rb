@@ -12,7 +12,7 @@ class Interface
 
   attr :message, true
 
-  def draw_map(map, player, monsters, explosions)
+  def draw_map(map, player, players, monsters, explosions)
     for dy in 0..max_height
       y = player.y - (max_height / 2) + dy
       setpos 1 + dy, 2
@@ -44,13 +44,16 @@ class Interface
     # find the explosions, which may be out of the map
     render_objects(explosions, player, "%")
 
+    # find the players, which may be out of the map
+    render_objects(players, player, "@")
+
     # find the player, always in the centre
     # setpos 2 + player.y, 2 + player.x
     setpos 1 + (max_height / 2), 2 + (max_width / 2)
     addstr "@"
 
     setpos max_height + 3, 2
-    addstr "(" + player.x.to_s + "," + player.y.to_s + ") " + monsters.size.to_s + " monsters left     "  # with padding for when 10->9 etc
+    addstr "(" + player.x.to_s + "," + player.y.to_s + ") " + monsters.size.to_s + " monsters, " + players.size.to_s + " players left     "  # with padding for when 10->9 etc
 
     setpos max_height + 4, 2
     addstr message + "                                                          "

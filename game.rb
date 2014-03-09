@@ -52,6 +52,17 @@ class ExplosionArray < SendableArray
   end
 end
 
+class PlayerArray < SendableArray
+  def loadFrom(str)
+    bits = str.split(",")
+    Player.new(bits[0].to_i, bits[1].to_i)
+  end
+
+  def sendTo(obj)
+    obj.x.to_s + "," + obj.y.to_s
+  end
+end
+
 PORT = 19065
 TICK = 0.5    # send new data between server/client every TICK seconds
 
@@ -59,6 +70,7 @@ map = nil
 monsters = nil
 explosions = nil
 player = nil
+players = nil
 
 interface = Interface.new()
 
@@ -89,25 +101,40 @@ if server
     end
   end
   explosions = ExplosionArray.new()
+  players = PlayerArray.new()
 
   # create the player - TODO in the future create multiple players
   player = createPlayer(map)
+  players.push player
 
   # and listen on a thread
   server = TCPServer.new PORT
   Thread.new(server, interface) {
     loop do
       Thread.start(server.accept) do |client|
-        interface.message = "New connection"
-        map.send client
-        loop do
-          # regularly send data
-          #player.send client
-          monsters.send client
-          explosions.send client
-          sleep TICK
+        begin
+          interface.message = "New connection"
+          map.send client
+          # then load the player
+          newPlayer = Player.new(-1,-1)
+          newPlayer.load(client)
+          players.push newPlayer
+          interface.message = "Loaded player "
+          interface.message = "Loaded player " + newPlayer.to_s
+          loop do
+            # regularly send data
+            newPlayer.load(client)
+            interface.message = "Updated player " + newPlayer.to_s
+            monsters.send client
+            explosions.send client
+            players.send client
+            interface.message = "Sent data"
+            sleep TICK
+          end
+          interface.message = "" + client.to_s + " disconnected"
+        rescue => e
+          interface.message = "Error " + e.to_s + e.backtrace.join(" ")
         end
-        interface.message = "" + client.to_s + " disconnected"
       end
     end
   }
@@ -123,20 +150,32 @@ else
   # load the map
   map = Map.new()
   map.load socket
+  interface.message = "Loaded map"
 
   # create the player (after the map is loaded) - TODO in the future create multiple players
   player = createPlayer(map)
+  player.send socket
+  interface.message = "Sent initial player"
 
   # everything else (players, monsters) is sent by the server regularly
   monsters = MonsterArray.new()
   explosions = ExplosionArray.new()
+  players = PlayerArray.new()
   Thread.new(monsters, explosions) {
-    loop do
-      #player.load socket
-      monsters.load socket
-      explosions.load socket
-      # we don't sleep here because we'll block on load() waiting for data
-      # (i.e. the server controls the data rate)
+    begin
+      loop do
+        player.send socket
+        interface.message = "Updated player"
+        monsters.load socket
+        explosions.load socket
+        players.load socket
+        interface.message = "Received data"
+        # we don't sleep here because we'll block on load() waiting for data
+        # (i.e. the server controls the data rate)
+      end
+    rescue => e
+      interface.message = e.to_s
+      puts e
     end
   }
 end
@@ -148,12 +187,12 @@ noecho
 srand
 
 # test that draw_map works correctly
-interface.draw_map(map, player, monsters, explosions)
+interface.draw_map(map, player, players, monsters, explosions)
 refresh
 
-Thread.new(map, player, monsters, interface, explosions) {
+Thread.new(map, player, players, monsters, interface, explosions) {
   loop do
-    interface.draw_map(map, player, monsters, explosions)
+    interface.draw_map(map, player, players, monsters, explosions)
     interface.draw_instructions()
     refresh
     sleep 0.01
