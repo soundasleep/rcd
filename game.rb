@@ -118,6 +118,7 @@ else
   puts "Connecting..."
 
   socket = TCPSocket.new ip, PORT
+  puts "Loading map..."
 
   # load the map
   map = Map.new()
@@ -127,14 +128,16 @@ else
   player = createPlayer(map)
 
   # everything else (players, monsters) is sent by the server regularly
-  monsters = Array.new()
-  explosions = Array.new()
+  monsters = MonsterArray.new()
+  explosions = ExplosionArray.new()
   Thread.new(monsters, explosions) {
-    #player.load socket
-    monsters.load socket
-    explosions.load socket
-    # we don't sleep here because we'll block on load() waiting for data
-    # (i.e. the server controls the data rate)
+    loop do
+      #player.load socket
+      monsters.load socket
+      explosions.load socket
+      # we don't sleep here because we'll block on load() waiting for data
+      # (i.e. the server controls the data rate)
+    end
   }
 end
 
