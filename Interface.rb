@@ -6,6 +6,12 @@ class Interface
     20
   end
 
+  def initialize
+    @message = ""
+  end
+
+  attr :message, true
+
   def draw_map(map, player, monsters, explosions)
     for dy in 0..max_height
       y = player.y - (max_height / 2) + dy
@@ -46,6 +52,9 @@ class Interface
     setpos max_height + 3, 2
     addstr "(" + player.x.to_s + "," + player.y.to_s + ") " + monsters.size.to_s + " monsters left     "  # with padding for when 10->9 etc
 
+    setpos max_height + 4, 2
+    addstr message + "                                                          "
+
   end
 
   def render_objects(array, player, char) 
@@ -70,7 +79,7 @@ class Interface
     # for i in 0..instructions.length - this wasn't working
     i = 0
     for inst in instructions 
-      setpos max_height + 4 + i, 2
+      setpos max_height + 5 + i, 2
       addstr inst
       i += 1
     end

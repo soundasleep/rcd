@@ -1,6 +1,8 @@
 require 'curses'
 include Curses    # I think this means, import curses.*
 
+require 'socket'
+
 require_relative 'Room'
 require_relative 'Map'
 require_relative 'TwoDimensionalObject'
@@ -9,34 +11,138 @@ require_relative 'Monster'
 require_relative 'Explosion'
 require_relative 'Interface'
 
-init_screen     # or, Curses.init_screen
-nl
-noecho
-srand
+class SendableArray < Array
+  def send(socket)
+    socket.puts size.to_s
+    for obj in self
+      socket.puts sendTo(obj)
+    end
+  end
 
-map = Map.new()
-player = nil
-loop do
-  x = rand(map.height)
-  y = rand(map.width)
-  if map.data[(y * map.width) + x] == 2
-    player = Player.new(x, y)
-    break
+  def load(socket)
+    size = socket.gets.to_i
+    clear()
+    for _ in 1..size
+      push loadFrom(socket.gets)
+    end
+  end
+
+  # need to implement local method loadFrom and sendTo
+end
+
+class MonsterArray < SendableArray
+  def loadFrom(str)
+    bits = str.split(",")
+    Monster.new(bits[0].to_i, bits[1].to_i)
+  end
+
+  def sendTo(obj)
+    obj.x.to_s + "," + obj.y.to_s
   end
 end
+
+class ExplosionArray < SendableArray
+  def loadFrom(str)
+    bits = str.split(",")
+    Explosion.new(bits[0].to_i, bits[1].to_i)
+  end
+
+  def sendTo(obj)
+    obj.x.to_s + "," + obj.y.to_s
+  end
+end
+
+PORT = 19065
+TICK = 0.5    # send new data between server/client every TICK seconds
+
+map = nil
+monsters = nil
+explosions = nil
+player = nil
+
 interface = Interface.new()
-monsters = Array.new()
-for _ in 1..20
+
+def createPlayer(map)
   loop do
     x = rand(map.height)
     y = rand(map.width)
     if map.data[(y * map.width) + x] == 2
-      monsters.push Monster.new(x, y)
-      break
+      return Player.new(x, y)
     end
   end
 end
-explosions = Array.new()
+
+# set up server
+if server
+  map = Map.new()
+  map.generate()
+
+  monsters = MonsterArray.new()
+  for _ in 1..20
+    loop do
+      x = rand(map.height)
+      y = rand(map.width)
+      if map.data[(y * map.width) + x] == 2
+        monsters.push Monster.new(x, y)
+        break
+      end
+    end
+  end
+  explosions = ExplosionArray.new()
+
+  # create the player - TODO in the future create multiple players
+  player = createPlayer(map)
+
+  # and listen on a thread
+  server = TCPServer.new PORT
+  Thread.new(server, interface) {
+    loop do
+      Thread.start(server.accept) do |client|
+        interface.message = "New connection"
+        map.send client
+        loop do
+          # regularly send data
+          #player.send client
+          monsters.send client
+          explosions.send client
+          sleep TICK
+        end
+        interface.message = "" + client.to_s + " disconnected"
+      end
+    end
+  }
+else
+  puts "What server/IP would you like to connect to?"
+  ip = gets.strip()
+
+  puts "Connecting..."
+
+  socket = TCPSocket.new ip, PORT
+
+  # load the map
+  map = Map.new()
+  map.load socket
+
+  # create the player (after the map is loaded) - TODO in the future create multiple players
+  player = createPlayer(map)
+
+  # everything else (players, monsters) is sent by the server regularly
+  monsters = Array.new()
+  explosions = Array.new()
+  Thread.new(monsters, explosions) {
+    #player.load socket
+    monsters.load socket
+    explosions.load socket
+    # we don't sleep here because we'll block on load() waiting for data
+    # (i.e. the server controls the data rate)
+  }
+end
+
+# after we have set up connection, start rendering
+init_screen     # or, Curses.init_screen
+nl
+noecho
+srand
 
 # test that draw_map works correctly
 interface.draw_map(map, player, monsters, explosions)
@@ -54,18 +160,20 @@ Thread.new(map, player, monsters, interface, explosions) {
   end
 }
 
-# test that wander works correctly
-monsters[0].wander(map)
+if server
+  # test that wander works correctly
+  monsters[0].wander(map)
 
-Thread.new(map, player, monsters) {
-  loop do
-    sleep 1
-    for monster in monsters
-      # move randomly
-      monster.wander(map)
+  Thread.new(map, player, monsters) {
+    loop do
+      sleep 1
+      for monster in monsters
+        # move randomly
+        monster.wander(map)
+      end
     end
-  end
-}
+  }
+end
 
 # "shoot" something from x,y in the direction dx,dy until it hits either a player or a monster
 def shoot(x, y, dx, dy, map, monsters, explosions)

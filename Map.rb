@@ -1,5 +1,30 @@
 class Map
   def initialize
+    @height = 100
+    @width = 100
+  end
+
+  attr :width, true
+  attr :height, true
+
+  def send(socket)
+    socket.puts width.to_s
+    socket.puts height.to_s
+    for i in 0..(height * width)-1
+      socket.puts @data[i].to_s
+    end
+  end
+
+  def load(socket)
+    width = socket.gets.to_i
+    height = socket.gets.to_i
+    @data = Array.new(width * height, 0)
+    for i in 0..(height * width)-1
+      @data[i] = socket.gets.to_i
+    end
+  end
+
+  def generate
     @data = Array.new(width * height, 0)
 
     # lets initialise some rooms and stuff
@@ -71,12 +96,6 @@ class Map
     end
   end
 
-  def height
-    100
-  end
-  def width
-    100
-  end
   def data
     @data
   end
