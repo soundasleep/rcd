@@ -1,6 +1,6 @@
 class Player < Monster
   def load(socket)
-    bits = socket.gets.split(",")
+    bits = socket.gets.strip().split(",")
     @x = bits[0].to_i
     @y = bits[1].to_i
     @name = bits[2]

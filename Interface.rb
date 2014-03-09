@@ -8,10 +8,12 @@ class Interface
 
   def initialize
     @message = ""
+    @global_message = ""
     @server = true
   end
 
   attr :message, true
+  attr :global_message, true
   attr :server, true
 
   def draw_map(map, player, players, monsters, explosions)
@@ -60,6 +62,9 @@ class Interface
     setpos max_height + 4, 2
     addstr message + "                                                          "
 
+    setpos max_height + 5, 2
+    addstr "<global> " + global_message + "                                                          "
+
   end
 
   def render_objects(array, player, char) 
@@ -84,7 +89,7 @@ class Interface
     # for i in 0..instructions.length - this wasn't working
     i = 0
     for inst in instructions 
-      setpos max_height + 5 + i, 2
+      setpos max_height + 6 + i, 2
       addstr inst
       i += 1
     end

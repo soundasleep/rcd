@@ -67,17 +67,19 @@ if server
       Thread.start(server.accept) do |client|
         newPlayer = Player.new(-1,-1,"Unknown")
         begin
-          interface.message = "New connection"
+          interface.message = "New connection..."
           map.send client
           # then load the player
           newPlayer.load(client)
           players.push newPlayer
           interface.message = "Player " + newPlayer.name + " connected"
+          interface.global_message = "Player " + newPlayer.name + " connected"
           loop do
             # regularly send data
             newPlayer.load(client)
             queuedShots.load client
             queuedShots.each{ |s| shoot(s.x, s.y, s.dx, s.dy, map, monsters, explosions) }
+            client.puts interface.global_message
             monsters.send client
             explosions.send client            
             players.without(newPlayer).send client   # don't send this player; they already know where they are
@@ -88,6 +90,7 @@ if server
           interface.message = "Error " + e.to_s + e.backtrace.join(" ")
         end
         interface.message = "Player " + newPlayer.name + " disconnected"
+        interface.global_message = "Player " + newPlayer.name + " disconnected"
         players.delete newPlayer    # delete the player when they disconnect
       end
     end
@@ -122,6 +125,7 @@ else
         player.send socket
         queuedShots.send socket
         queuedShots.clear()
+        interface.global_message = socket.gets.strip()
         monsters.load socket
         explosions.load socket
         players.load socket

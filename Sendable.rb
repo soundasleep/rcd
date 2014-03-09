@@ -11,7 +11,7 @@ class SendableArray < Array
     size = socket.gets.to_i
     results = Array.new()
     for _ in 1..size
-      results.push loadFrom(socket.gets)
+      results.push loadFrom(socket.gets.strip())
     end
     replace(results)
   end
