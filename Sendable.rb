@@ -55,11 +55,11 @@ end
 class PlayerArray < SendableArray
   def loadFrom(str)
     bits = str.split(",")
-    Player.new(bits[0].to_i, bits[1].to_i)
+    Player.new(bits[0].to_i, bits[1].to_i, bits[2])
   end
 
   def sendTo(obj)
-    obj.x.to_s + "," + obj.y.to_s
+    obj.x.to_s + "," + obj.y.to_s + "," + obj.name
   end
 
   def without(player)

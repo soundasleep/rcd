@@ -6,8 +6,8 @@ require 'socket'
 require_relative 'Room'
 require_relative 'Map'
 require_relative 'TwoDimensionalObject'
-require_relative 'Player'
 require_relative 'Monster'
+require_relative 'Player'
 require_relative 'Explosion'
 require_relative 'QueuedShot'
 require_relative 'Interface'
@@ -26,11 +26,13 @@ queuedShots = QueuedShotArray.new()
 interface = Interface.new()
 
 def createPlayer(map)
+  puts "Enter in a player name:"
+  name = gets.gsub(/,/, "").strip()
   loop do
     x = rand(map.height)
     y = rand(map.width)
     if map.data[(y * map.width) + x] == 2
-      return Player.new(x, y)
+      return Player.new(x, y, name)
     end
   end
 end
@@ -63,14 +65,14 @@ if server
   Thread.new(server, interface) {
     loop do
       Thread.start(server.accept) do |client|
-        newPlayer = Player.new(-1,-1)
+        newPlayer = Player.new(-1,-1,"Unknown")
         begin
           interface.message = "New connection"
           map.send client
           # then load the player
           newPlayer.load(client)
           players.push newPlayer
-          interface.message = "Player " + newPlayer.to_s + " connected"
+          interface.message = "Player " + newPlayer.name + " connected"
           loop do
             # regularly send data
             newPlayer.load(client)
@@ -85,7 +87,7 @@ if server
         rescue => e
           interface.message = "Error " + e.to_s + e.backtrace.join(" ")
         end
-        interface.message = "Player " + newPlayer.to_s + " disconnected"
+        interface.message = "Player " + newPlayer.name + " disconnected"
         players.delete newPlayer    # delete the player when they disconnect
       end
     end
@@ -115,6 +117,7 @@ else
   players = PlayerArray.new()
   Thread.new(monsters, explosions) {
     begin
+      interface.message = "Connected as " + player.name
       loop do
         player.send socket
         queuedShots.send socket

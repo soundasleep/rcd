@@ -1,4 +1,4 @@
-class Monster < Player
+class Monster < TwoDimensionalObject
   def wander(map)
     dx = rand(3) - 1
     dy = rand(3) - 1
