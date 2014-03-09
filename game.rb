@@ -9,6 +9,7 @@ require_relative 'TwoDimensionalObject'
 require_relative 'Player'
 require_relative 'Monster'
 require_relative 'Explosion'
+require_relative 'QueuedShot'
 require_relative 'Interface'
 
 class SendableArray < Array
@@ -52,6 +53,17 @@ class ExplosionArray < SendableArray
   end
 end
 
+class QueuedShotArray < SendableArray
+  def loadFrom(str)
+    bits = str.split(",")
+    QueuedShot.new(bits[0].to_i, bits[1].to_i, bits[2].to_i, bits[3].to_i)
+  end
+
+  def sendTo(obj)
+    obj.x.to_s + "," + obj.y.to_s + "," + obj.dx.to_s + "," + obj.dy.to_s
+  end
+end
+
 class PlayerArray < SendableArray
   def loadFrom(str)
     bits = str.split(",")
@@ -77,6 +89,7 @@ monsters = nil
 explosions = nil
 player = nil
 players = nil
+queuedShots = QueuedShotArray.new()
 
 interface = Interface.new()
 
@@ -131,6 +144,8 @@ if server
             # regularly send data
             newPlayer.load(client)
             interface.message = "Updated player " + newPlayer.to_s
+            queuedShots.load client
+            queuedShots.each{ |s| shoot(s.x, s.y, s.dx, s.dy, map, monsters, explosions) }
             monsters.send client
             explosions.send client            
             players.without(newPlayer).send client   # don't send this player; they already know where they are
@@ -172,6 +187,8 @@ else
       loop do
         player.send socket
         interface.message = "Updated player"
+        queuedShots.send socket
+        queuedShots.clear()
         monsters.load socket
         explosions.load socket
         players.load socket
@@ -265,12 +282,28 @@ loop do
   when "d"
     player.x += 1 unless player.x >= (map.width - 1) or map.blocked(player.x + 1, player.y)
   when "W"
-    shoot(player.x, player.y, 0, -1, map, monsters, explosions)
+    if server
+      shoot(player.x, player.y, 0, -1, map, monsters, explosions)
+    else
+      queuedShots.push QueuedShot.new(player.x, player.y, 0, -1)
+    end
   when "S"
-    shoot(player.x, player.y, 0, 1, map, monsters, explosions)
+    if server
+      shoot(player.x, player.y, 0, 1, map, monsters, explosions)
+    else
+      queuedShots.push QueuedShot.new(player.x, player.y, 0, 1)
+    end
   when "A"
-    shoot(player.x, player.y, -1, 0, map, monsters, explosions)
+    if server
+      shoot(player.x, player.y, -1, 0, map, monsters, explosions)
+    else
+      queuedShots.push QueuedShot.new(player.x, player.y, -1, 0)
+    end
   when "D"
-    shoot(player.x, player.y, 1, 0, map, monsters, explosions)
+    if server
+      shoot(player.x, player.y, 1, 0, map, monsters, explosions)
+    else
+      queuedShots.push QueuedShot.new(player.x, player.y, 1, 0)
+    end
   end
 end
