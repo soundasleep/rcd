@@ -7,6 +7,8 @@ This is my second ever project in Ruby and mostly was a mechanism for me to lear
 Consequently there are heaps of bugs and it needs significant amounts of refactoring, etc.
 (I only learnt about `require_relative` yesterday.)
 
+![Screenshot of game](https://raw.github.com/soundasleep/rcd/master/screenshot.png)
+
 Running
 -------
 
@@ -28,3 +30,5 @@ thread safety yet, so it's very likely the game may desync between clients and t
 You can't shoot players.
 
 There isn't actually any goals in the game. Scoring, respawning etc - not implemented.
+
+Better room generation code. Right now it guarantees that all rooms will be connected - that's about it.
